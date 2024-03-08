@@ -1,49 +1,89 @@
-//Add esses imports
-import { Component, OnInit } from '@angular/core';
-import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons';
-import { CourseService } from '../course.service';
+import { Component } from '@angular/core';
 
+//add esses imports
+import { FormGroup } from '@angular/forms';
+import { FormlyFieldConfig } from '@ngx-formly/core';
+import { ActivatedRoute, Router } from "@angular/router";
+import { SharedService } from 'src/app/shared/shared.service';
+import { CourseService } from '../course.service';
 @Component({
   selector: 'app-course-list',
   templateUrl: './course-list.component.html',
   styleUrls: ['./course-list.component.scss']
 })
-export class CourseListComponent implements OnInit {
-  //Implementar essa classe inteira
-  faPencil = faPencil;
-  faTrash = faTrash;
+export class CourseListComponent {
+  // implementar essa classe toda aqui
+  course: any = {};
+  list = new FormGroup({});
+  model: any = {};
+  //Cria os campos e atribui os valores para serem gerados pelo angular
 
-  courses: any[] = [];
+  fields: FormlyFieldConfig[] = [
+    {
+      className: 'd-flex align-content-center justify-content-center',
+      fieldGroupClassName: 'row',
+      fieldGroup: [
+        {
+          key: 'name',
+          type: 'input',
+          props: {
+            label: 'Nome do Curso',
+            placeholder: 'Nome do Curso',
+            required: true,
+          },
+        }
+      ]
+    }
+  ];
 
-  constructor(private courseService: CourseService) { }
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private courseService: CourseService,
+    private sharedService: SharedService
+  ) {
 
-  async ngOnInit(): Promise<void> {
-    await this.listCourses();
 
-  }
+    this.route.queryParams.subscribe(async (params: any) => {
+      if (params.id !== undefined && params.id !== null) {
+        this.course = await this.courseService.get<any>({
+          url: `http://localhost:3000/course/${params.id}`,
+          params: {
 
-  async listCourses(): Promise<void> {
-    this.courses = await this.courseService.get<any[]>({
-      url: "http://localhost:3000/getAllCourses",
-      params: {
-
+          }
+        });
+        this.model = this.course;
+      } else {
+        this.model = {}
       }
+
     });
   }
 
-  async delete(id: number): Promise<void> {
-    if (confirm("Deseja deletar este curso?")) {
-      await this.courseService.delete<any>({
-        url: `http://localhost:3000/deleteCourse/${id}`,
-        params: {
+  async onSubmit(): Promise<void> {
+    if (this.list.valid) {
+      if (this.model?.id !== undefined && this.model?.id !== null) {
+        this.course = await this.courseService.put<any>({
+          url: `http://localhost:3000/updateCourse/${this.model?.id}`,
+          params: {
 
-        }
-      });
-      await this.listCourses();
+          },
+          data: this.model
+        });
+
+      } else {
+        delete this.model?.id;
+        await this.courseService.post<any>({
+          url: `http://localhost:3000/addCourse`,
+          params: {
+
+          },
+          data: this.model
+        })
+      }
+
     }
-  }
-
-  onConfirm(value: any) {
-    alert("Value:" + value);
+    await this.router.navigate(['/courses']);
   }
 }
+
